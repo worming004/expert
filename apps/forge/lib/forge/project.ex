@@ -164,7 +164,7 @@ defmodule Forge.Project do
   end
 
   def manager_node_name(%__MODULE__{} = project) do
-    :"manager-#{name(project)}-#{entropy(project)}@127.0.0.1"
+    :"expert-manager-#{name(project)}-#{entropy(project)}@127.0.0.1"
   end
 
   @doc """

@@ -29,19 +29,29 @@ defmodule Expert.EngineNode do
 
     def start(%__MODULE__{} = state, paths, from) do
       this_node = inspect(Node.self())
+      dist_port = Forge.EPMD.dist_port()
 
-      args = [
-        "--name",
-        Project.node_name(state.project),
-        "--cookie",
-        state.cookie,
-        "--no-halt",
-        "-e",
-        "Node.connect(#{this_node})"
-        | path_append_arguments(paths)
-      ]
+      args =
+        [
+          "--erl",
+          "-start_epmd false -epmd_module #{Forge.EPMD}",
+          "--sname",
+          Project.node_name(state.project),
+          "--cookie",
+          state.cookie,
+          "--no-halt",
+          "-e",
+          "IO.puts(\"ok\")"
+          | path_append_arguments(paths)
+        ]
 
-      case Expert.Port.open_elixir(state.project, args: args) do
+      env =
+        [
+          {"EXPERT_PARENT_NODE", this_node},
+          {"EXPERT_PARENT_PORT", to_string(dist_port)}
+        ]
+
+      case Expert.Port.open_elixir(state.project, args: args, env: env) do
         {:error, :no_elixir, message} ->
           GenLSP.error(Expert.get_lsp(), message)
           Expert.terminate("Failed to find an elixir executable, shutting down", 1)
@@ -134,7 +144,7 @@ defmodule Expert.EngineNode do
 
   defp start_net_kernel(%Project{} = project) do
     manager = Project.manager_node_name(project)
-    :net_kernel.start(manager, %{name_domain: :longnames})
+    :net_kernel.start(manager, %{name_domain: :shortnames})
   end
 
   defp ensure_apps_started(node) do
@@ -365,7 +375,8 @@ defmodule Expert.EngineNode do
   end
 
   @impl true
-  def handle_info({_port, {:data, _message}}, %State{} = state) do
+  def handle_info({_port, {:data, message}}, %State{} = state) do
+    Logger.debug("Node port message: #{to_string(message)}")
     {:noreply, state}
   end
 

@@ -12,6 +12,8 @@ defmodule Engine.Bootstrap do
   require Logger
 
   def init(%Project{} = project, document_store_entropy, app_configs) do
+    Application.put_env(:kernel, :epmd_module, Forge.EPMD, persistent: true)
+    Forge.NodePortMapper.register()
     Forge.Document.Store.set_entropy(document_store_entropy)
 
     Application.put_all_env(app_configs)
